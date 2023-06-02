@@ -15,7 +15,7 @@ def agregar(connection, db):
     palabra=input("Por favor ingrese la palabra clave \n")
     if palabra == contra:
         # Se le solicita al usuario que ingrese los datos
-        cancion=input("Ingrese el nombre de la cancion a agregar a la base de datos \n >")
+        cancion = input("Ingrese el nombre de la cancion a agregar a la base de datos \n >")
         datos = {"Artista":"", "Genero":"","EstadoDeAnimo":"","Estrellas":""}
         # El ciclo FOR recorre el diccionario datos y guarda la informacion que el usuario ingrese.
         for keys in datos:
@@ -28,7 +28,7 @@ def agregar(connection, db):
         # Primer query para crear la cancion
         query = '''
             CREATE (p:Cancion{cancion:"%s", ranking:'0'})
-        '''%(cancion)
+        ''' % (cancion)
         connection.query(query, db)
         # Se envia otro query uniendo a la cancion con sus caracteristicas. Se envia en estructura del codigo de cypher para que la plataforma entienda el query.
         query='''MATCH (p:Cancion) WHERE p.cancion = '%s'
@@ -36,11 +36,11 @@ def agregar(connection, db):
                 MERGE (p) -[:Artista]-> (p1) WITH p
                 MATCH (p2:Genero) WHERE p2.genero = '%s'
                 MERGE (p) -[:Genero]->(p2) WITH p
-                MATCH (p3:EstadoDeAnimo) WHERE p3.estadoDeAnimo = '%s' 
-                MERGE (p) -[:EstadoDeAmimo]->(p3) WITH p
+                MATCH (p3:EstadoDeAnimo) WHERE p3.estadoDeAnimo = '%s'
+                MERGE (p) -[:Genero]->(p3) WITH p
                 MATCH (p4:Estrellas) WHERE p4.estrellas = '%s' 
-                MERGE (p) -[:Estrellas]->(p4) WITH p
-            '''%(cancion,datos['Artista'],datos['Genero'],datos['EstadoDeAmimo'],datos['Estrellas'])
+                MERGE (p) -[:Estrellas]->(p4) return p
+            ''' % (cancion, datos['Artista'],datos['Genero'],datos['EstadoDeAnimo'],datos['Estrellas'])
         connection.query(query, db)
     else:
         #contrasena es incorrecta
@@ -186,27 +186,27 @@ def ConsultaUsuario(connection, db):
     # Se le envia a la base de datos el query con las caracteristicas que selecciono el usuario
     query ='''
             MATCH (p:Cancion)-[:Artista]->(p1:Artista{artista:"%s"}),
-            (p)-[:Artista]-> (p4:Artista{artista:"%s"}),
-            (p)-[:EstadoDeAnimo]-> (p5:EstadoDeAnimo{estadoDeAnimo:"%s"}),
-            (p)-[:Estrellas]-> (p11:Estrellas{estrellas:"%s"}) return p.cancion, p.ranking
-           '''%(datos['Artista'],datos['Genero'],datos['EstadoDeAnimo'],datos['Estrellas'])
+            (p)-[:Genero]-> (p3:Genero{genero:"%s"}),
+            (p)-[:EstadoDeAnimo]-> (p4:EstadoDeAnimo{estadoDeAnimo:"%s"}),
+            (p)-[:Estrellas]-> (p5:Estrellas{estrellas:"%s"}) return p.cancion, p.ranking
+           ''' % (datos['Artista'],datos['Genero'],datos['EstadoDeAnimo'],datos['Estrellas'])
     query_result = connection.query(query, db)
     #Si se encuentra entonces se muestra al usuario.
     if query_result:
         recomendacion = query_ranking(connection, query_result)
     #En caso que no se encuentren, entonces se realiza un query con menos opciones
     elif not query_result:
-        query ='''MATCH (p:Cancion)-[:Artista]->(p5:Artista{artista:"%s"}),
-            (p)-[:EstadoDeAnimo]-> (p2:EstadoDeAnimo{estadoDeAnimo:"%s"}),
-            (p)-[:Estrellas]-> (p3:Estrellas{estrellas:"%s"}) return p.cancion, p.ranking
-            '''%(datos['Artista'],datos['EstadoDeAnimo'],datos['Estrellas'])
+        query ='''MATCH (p:Cancion)-[:Artista]->(p3:Artista{artista:"%s"}),
+            (p)-[:Genero]-> (p2:Genero{genero:"%s"}),
+            (p)-[:Estrellas]-> (p4:Estrellas{estrellas:"%s"}),
+            ''' % (datos['Artista'],datos['Genero'],datos['Estrellas'])
         query_result = connection.query(query, db)
         if query_result:
             recomendacion = query_ranking(connection, query_result)
         #En caso que no se encuentre de nuevo, se vuelve a hacer un query solo con el Artista.
         elif not query_result:
-            query ='''MATCH (p:Cancion)-[:Artista]->(p5:Artista{artista:"%s"})  return p.cancion, p.ranking
-                '''%(datos['Artista'])
+            query ='''MATCH (p:Cancion)-[:Artista]->(p3:Artista{artista:"%s"})  return p.cancion, p.ranking
+                ''' % (datos['Artista'])
             query_result = connection.query(query, db)
             recomendacion = query_ranking(connection, query_result)
     
@@ -236,7 +236,8 @@ def TerminosYCondiciones():
 
 
 #Conexiones a base de datos.
-conn = Neo4jConnection(uri="bolt://localhost:####", user="neo4j", pwd="12345678")
+conn = Neo4jConnection(uri="bolt://localhost:####",
+                       user="neo4j", pwd="12345678")
 db = 'neo4j'
 
 #-----------------------Inicio del menu--------------------------------
@@ -259,7 +260,6 @@ while(continuar):
     if op1==1:
         RecomendacionExitosa=ConsultaUsuario(conn, db)
         print(f"Se le recomienda escuchar la cancion: {RecomendacionExitosa}")
-        print(cancion)
     elif op1==2:#Agregar a la base de datos
         agregar(conn,db)
     elif op1==3:#Quitar de la base de datos
